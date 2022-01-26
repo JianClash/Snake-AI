@@ -1,1 +1,1 @@
-Snake-Ai
+Snake-AI
