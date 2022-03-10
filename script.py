@@ -1,20 +1,22 @@
-from distutils.spawn import spawn
 import pygame
+from A_Star import A_star, Node
 from random import randrange
 
-width, height = 1300, 700  # width and height must be divisable by snake_size
+snake_size = 20
+rows = 30
+columns = 30
+width = rows * snake_size
+height = columns * snake_size
 
 # colors reperesented as RGB values
 black = (0, 0, 0)
 white = (255, 255, 255)
 green = (50, 205, 50)
 red = (255, 0, 0)
+cyan = (0, 255, 255)
 
-snake_size = 25
-spawnCoords = [pygame.Rect(width // 2, height // 2, snake_size, snake_size)]
-fps = 10
-
-assert width % snake_size == 0 and height % snake_size == 0, 'width and height should be divisible by snake_size'
+spawnCoords = [pygame.Rect(0, 0, snake_size, snake_size)]
+fps = 30
 
 win = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Snake AI")
@@ -29,33 +31,54 @@ class Snake:
         self.direction = None
         self.previousRect = self.head
 
-    def move(self, appleX, appleY):
+    def move(self, appleX, appleY, path):
         new_snake = []
 
         # Checks the x and y coordinates of the apple and compares them to the snakes
         # and determines the direction it is going to move next
-        if appleX < self.head.x:  # Left
-            self.direction = (-snake_size, 0)
-        elif appleX > self.head.x:  # Right
-            self.direction = (snake_size, 0)
-        elif appleY < self.head.y:  # Up
-            self.direction = (0, -snake_size)
-        else:  # Down
-            self.direction = (0, snake_size)
+        # if appleX < self.head.x:  # Left
+        #     self.direction = (-snake_size, 0)
+        # elif appleX > self.head.x:  # Right
+        #     self.direction = (snake_size, 0)
+        # elif appleY < self.head.y:  # Up
+        #     self.direction = (0, -snake_size)
+        # else:  # Down
+        #     self.direction = (0, snake_size)
+
+        x = path[-1].j * snake_size
+        y = path[-1].i * snake_size
+        #
+        # if appleX < x:  # Left
+        #     self.direction = (-snake_size, 0)
+        # elif appleX > x:  # Right
+        #     self.direction = (snake_size, 0)
+        # elif appleY < y:  # Up
+        #     self.direction = (0, -snake_size)
+        # else:  # Down
+        #     self.direction = (0, snake_size)
 
         # Loops through every snake part and move the head in the direction
         # The other parts follow the rect infront of it
+        # for rect in self.body:
+        #     if rect is self.head:
+        #         new_snake.append(rect.move(
+        #             self.direction[0], self.direction[1]))
+        #     else:
+        #         new_snake.append(self.previousRect)
+        #
+        #     self.previousRect = rect
+
         for rect in self.body:
-            if rect == self.head:
-                new_snake.append(rect.move(
-                    self.direction[0], self.direction[1]))
+            if rect is self.head:
+                new_snake.append(pygame.Rect(x,y, snake_size, snake_size))
             else:
                 new_snake.append(self.previousRect)
-
             self.previousRect = rect
 
         self.body = new_snake
         self.head = new_snake[0]
+        self.direction = True
+
 
     def draw(self):
         # Loops through every part of the snake and draws them induvidally
@@ -64,10 +87,19 @@ class Snake:
 
 
 class Apple:
-    def spawn(self, snake_size):
+    def spawn(self, snake_size, snake):
+        unavailableSpotsX = []
+        unavailableSpotsY = []
+        self.x, self.y = None, None
+        for rect in snake.body:
+            unavailableSpotsX.append(rect.x)
+            unavailableSpotsY.append(rect.y)
         # Spawns the apple in the fixed locations inside the cells
-        self.x = randrange(0, width, snake_size)
-        self.y = randrange(0, height, snake_size)
+        while self.x not in unavailableSpotsX and self.y not in unavailableSpotsY:
+            self.x = randrange(0, width, snake_size)
+            self.y = randrange(0, height, snake_size)
+
+
 
     def draw(self, snake_size):
         # Draws the apple
@@ -92,13 +124,45 @@ def handle_collision(snake, x_coord, y_coord):
     apple = pygame.Rect(x_coord, y_coord, snake_size, snake_size)
     return apple.colliderect(snake)
 
+def getGrid(snake):
+    # making a 2d array
+    grid = []
+    for i in range(columns):
+        grid.append([])
+        for j in range(rows):
+            grid[i].append([])
+
+    num = 0
+    for i in range(columns):
+        for j in range(rows):
+            grid[i][j] = Node(i, j)
+            grid[i][j].isSnake(snake)
+            if grid[i][j].wall == True:
+                num += 1
+    print(num)
+
+    for i in range(columns):
+        for j in range(rows):
+            grid[i][j].addNeighbours(grid, rows, columns)
+
+    return grid
+
+def draw_path(path):
+    for i in path:
+        if i.previous != None:
+            startX = (i.j*snake_size) + (snake_size//2)
+            startY = (i.i*snake_size) + (snake_size//2)
+            endX = (i.previous.j*snake_size) + (snake_size//2)
+            endY = (i.previous.i*snake_size) + (snake_size//2)
+
+            pygame.draw.line(win, cyan, (startX, startY), (endX, endY), 3)
 
 def main():
     snake = Snake(snake_size, green, spawnCoords)
     apple = Apple()
+
     clock = pygame.time.Clock()
     appleSpawned = False
-
     while True:
         # Slows down the loop to the fps
         clock.tick_busy_loop(fps)
@@ -110,26 +174,40 @@ def main():
                 exit(0)
 
         if not appleSpawned:
-            apple.spawn(snake.size)
+            apple.spawn(snake.size, snake)
             appleSpawned = True
 
-            # If its not the first time spawning the apple spawn another rect in the back
+            # If its not the first time spawning the apple add a tail
             if snake.direction:
                 snake.body = snake.body + [snake.previousRect]
                 snake.head = snake.body[0]
 
+            # print(snake.head[0] // snake.size, snake.head[1] // snake.size)
+
+            grid = getGrid(snake)
+            start = grid[snake.head.y // snake.size][snake.head.x // snake.size]
+            end = grid[apple.y // snake.size][apple.x // snake.size]
+            path = A_star(start, end)
+
         apple.draw(snake.size)
 
         snake.draw()
-        snake.move(apple.x, apple.y)
+        snake.move(apple.x, apple.y, path)
 
         appleSpawned = not handle_collision(snake.head, apple.x, apple.y)
 
         draw_border()
+        draw_path(path)
 
-        # Display everything that just happened and fill the screen with a color
+        # Display everything that just happened and after that fill the screen with a color to be drawn on again
         pygame.display.update()
         win.fill(black)
+
+        if len(snake.body) == rows * columns:
+            print('win', len(snake.body))
+            break
+
+        path.pop(-1)
 
 
 if __name__ == '__main__':

@@ -1,1 +1,1 @@
-## Snake-AI made in python using the hamiltonian cycle algorithm
+## Snake-AI made in python using the A* algorithm
