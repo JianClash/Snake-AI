@@ -18,6 +18,7 @@ cyan = (0, 255, 255)
 spawnCoords = [pygame.Rect(0, 0, snake_size, snake_size)]
 fps = 30
 
+# Initalizing the screen
 win = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Snake AI")
 
@@ -31,42 +32,12 @@ class Snake:
         self.direction = None
         self.previousRect = self.head
 
-    def move(self, appleX, appleY, path):
+    def move(self, path):
         new_snake = []
-
-        # Checks the x and y coordinates of the apple and compares them to the snakes
-        # and determines the direction it is going to move next
-        # if appleX < self.head.x:  # Left
-        #     self.direction = (-snake_size, 0)
-        # elif appleX > self.head.x:  # Right
-        #     self.direction = (snake_size, 0)
-        # elif appleY < self.head.y:  # Up
-        #     self.direction = (0, -snake_size)
-        # else:  # Down
-        #     self.direction = (0, snake_size)
-
         x = path[-1].j * snake_size
         y = path[-1].i * snake_size
-        #
-        # if appleX < x:  # Left
-        #     self.direction = (-snake_size, 0)
-        # elif appleX > x:  # Right
-        #     self.direction = (snake_size, 0)
-        # elif appleY < y:  # Up
-        #     self.direction = (0, -snake_size)
-        # else:  # Down
-        #     self.direction = (0, snake_size)
 
-        # Loops through every snake part and move the head in the direction
-        # The other parts follow the rect infront of it
-        # for rect in self.body:
-        #     if rect is self.head:
-        #         new_snake.append(rect.move(
-        #             self.direction[0], self.direction[1]))
-        #     else:
-        #         new_snake.append(self.previousRect)
-        #
-        #     self.previousRect = rect
+    
 
         for rect in self.body:
             if rect is self.head:
@@ -137,9 +108,8 @@ def getGrid(snake):
         for j in range(rows):
             grid[i][j] = Node(i, j)
             grid[i][j].isSnake(snake)
-            if grid[i][j].wall == True:
+            if grid[i][j].wall == True: 
                 num += 1
-    print(num)
 
     for i in range(columns):
         for j in range(rows):
@@ -163,6 +133,7 @@ def main():
 
     clock = pygame.time.Clock()
     appleSpawned = False
+
     while True:
         # Slows down the loop to the fps
         clock.tick_busy_loop(fps)
@@ -182,7 +153,6 @@ def main():
                 snake.body = snake.body + [snake.previousRect]
                 snake.head = snake.body[0]
 
-            # print(snake.head[0] // snake.size, snake.head[1] // snake.size)
 
             grid = getGrid(snake)
             start = grid[snake.head.y // snake.size][snake.head.x // snake.size]
@@ -192,7 +162,7 @@ def main():
         apple.draw(snake.size)
 
         snake.draw()
-        snake.move(apple.x, apple.y, path)
+        snake.move(path)
 
         appleSpawned = not handle_collision(snake.head, apple.x, apple.y)
 
@@ -208,7 +178,6 @@ def main():
             break
 
         path.pop(-1)
-
 
 if __name__ == '__main__':
     main()
